@@ -1,84 +1,91 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Rol } from '../rol/entities/rol.entity';
+import { Role } from 'src/roles/entities/role.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly usersRepo: Repository<User>,
+    private readonly usersRepository: Repository<User>,
 
-    @InjectRepository(Rol)
-    private readonly rolRepo: Repository<Rol>,
+    @InjectRepository(Role)
+    private readonly rolesRepository: Repository<Role>,
   ) {}
 
-  async findByEmailIncludePassword(email: string): Promise<User | null> {
-    return await this.usersRepo
-      .createQueryBuilder('u')
-      .where('u.email = :email', { email })
-      .addSelect('u.password')
-      .getOne();
-  }
+  // Crear usuario
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const { roleId, password, ...rest } = createUserDto;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-  async create(dto: CreateUserDto): Promise<User> {
-    // Buscar el rol antes de crear el usuario
-    const rol = await this.rolRepo.findOne({ where: { id: dto.rolId } });
-    if (!rol) {
-      throw new NotFoundException(`Rol with id ${dto.rolId} not found`);
+    let role: Role | null = null;
+    if (roleId) {
+      role = await this.rolesRepository.findOne({ where: { id: roleId } });
+      if (!role) {
+        throw new NotFoundException(`Role with ID ${roleId} not found`);
+      }
     }
 
-    // Crear el usuario con su rol
-    const user = this.usersRepo.create({
-      email: dto.email,
-      password: dto.password,
-      displayName: dto.displayName,
-      rol, // Objeto Rol (no el id)
+    const user = this.usersRepository.create({
+      ...rest,
+      password: hashedPassword,
+      role: role ?? undefined, // ✅ evita error de tipo Role | null
     });
 
-    return await this.usersRepo.save(user);
+    return await this.usersRepository.save(user);
   }
 
-  async findAll(): Promise<User[]> {
-    // Cargar usuarios con su rol
-    return await this.usersRepo.find({ relations: ['rol'] });
+  // Listar todos los usuarios
+  findAll(): Promise<User[]> {
+    return this.usersRepository.find({
+      relations: ['role'],
+    });
   }
 
+  // Buscar un usuario por ID
   async findOne(id: number): Promise<User> {
-    const user = await this.usersRepo.findOne({
+    const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['rol'],
+      relations: ['role'],
     });
-
     if (!user) {
-      throw new NotFoundException(`User ${id} not found`);
+      throw new NotFoundException('User not found');
     }
-
     return user;
   }
 
-  async update(id: number, dto: UpdateUserDto): Promise<User> {
-    const user = await this.findOne(id);
-
-    // Si se envía un nuevo rol
-    if (dto.rolId) {
-      const rol = await this.rolRepo.findOne({ where: { id: dto.rolId } });
-      if (!rol) {
-        throw new NotFoundException(`Rol with id ${dto.rolId} not found`);
-      }
-      user.rol = rol;
-    }
-
-    // Actualizar los demás campos
-    Object.assign(user, dto);
-    return await this.usersRepo.save(user);
+  // Buscar usuario por email (para Auth)
+  async findByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { email },
+      relations: ['role'],
+    });
   }
 
+  // Actualizar usuario
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findOne(id);
+    const { roleId, ...rest } = updateUserDto;
+
+    if (roleId) {
+      const role = await this.rolesRepository.findOne({ where: { id: roleId } });
+      if (!role) {
+        throw new NotFoundException(`Role with ID ${roleId} not found`);
+      }
+      user.role = role;
+    }
+
+    Object.assign(user, rest);
+    return await this.usersRepository.save(user);
+  }
+
+  // Eliminar usuario
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id);
-    await this.usersRepo.remove(user);
+    await this.usersRepository.remove(user);
   }
 }

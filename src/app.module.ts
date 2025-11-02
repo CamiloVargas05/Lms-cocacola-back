@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
-import { User } from './users/entities/user.entity';
-import { MaterialsModule } from './materials/materials.module';
-import { ModulesModule } from './modules/modules.module';
-import { CoursesModule } from './courses/courses.module';
 import { AuthModule } from './auth/auth.module';
-import { RolModule } from './rol/rol.module';
+import { CursosModule } from './cursos/cursos.module';
+import { ModulosModule } from './modulos/modulos.module';
+import { LeccionModule } from './leccion/leccion.module';
 
 @Module({
   imports: [
@@ -23,15 +22,15 @@ import { RolModule } from './rol/rol.module';
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
       autoLoadEntities: true,
-      synchronize: true,         // ⚠️ solo para desarrollo
+      synchronize: false,         // ⚠️ solo para desarrollo
       logging: true,
     }),
+    RolesModule,
     UsersModule,
-    MaterialsModule,
-    ModulesModule,
-    CoursesModule,
     AuthModule,
-    RolModule
+    CursosModule,
+    ModulosModule,
+    LeccionModule
   ],
 })
 export class AppModule { }

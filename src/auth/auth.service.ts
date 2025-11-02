@@ -1,38 +1,50 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
+import * as bcrypt from 'bcrypt';
+import { UsersService } from 'src/users/users.service';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
-    private readonly jwt: JwtService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string) {
-    const user = await this.usersService.findByEmailIncludePassword(email);
-    if (!user) throw new UnauthorizedException('Credenciales inválidas');
+  // Login
+  async login(loginDto: LoginDto) {
+    const user = await this.usersService.findByEmail(loginDto.email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) throw new UnauthorizedException('Credenciales inválidas');
+    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-    const { password: _, ...safeUser } = user;
-    return safeUser;
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role?.name || 'empleado',
+    };
+
+    const access_token = this.jwtService.sign(payload);
+
+    return {
+      message: 'Login successful',
+      access_token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role?.name || 'empleado',
+      },
+    };
   }
 
-  async login(email: string, password: string) {
-    const user = await this.validateUser(email, password);
-    const payload = { sub: user.id, email: user.email, rol: user.rol };
-    const access_token = await this.jwt.signAsync(payload);
-    return { access_token, user };
-  }
-
-  async register(dto: RegisterDto) {
-    const user = await this.usersService.create(dto as any);
-    const payload = { sub: user.id, email: user.email, rol: user.rol };
-    const access_token = await this.jwt.signAsync(payload);
-    return { access_token, user };
+  // Logout (stateless)
+  async logout() {
+    return { message: 'Logout successful (client must delete token)' };
   }
 }

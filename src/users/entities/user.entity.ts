@@ -1,40 +1,41 @@
 import {
-  BeforeInsert,
-  BeforeUpdate,
-  Column,
   Entity,
   PrimaryGeneratedColumn,
-  Unique,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Rol } from '../../rol/entities/rol.entity';
-import * as bcrypt from 'bcrypt';
+import { Role } from 'src/roles/entities/role.entity';
 
 @Entity('users')
-@Unique(['email'])
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ length: 100 })
+  name: string;
+
+  @Column({ unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 255, select: false })
+  @Column({ nullable: false })
   password: string;
 
-  @Column({ type: 'text', nullable: true })
-  displayName: string;
+  @ManyToOne(() => Role, (role) => role.users, {
+    eager: true,
+    onDelete: 'SET NULL'
+  })
+  @JoinColumn({ name: 'role_id' })
+  role: Role;
 
-  @ManyToOne(() => Rol, { eager: true })
-  @JoinColumn({ name: 'rol_id' })
-  rol: Rol;
+  @Column({ nullable: true })
+  imageUrl: string;
 
-  @BeforeInsert()
-  @BeforeUpdate()
-  async hashPassword() {
-    if (this.password && !this.password.startsWith('$2b$')) {
-      this.password = await bcrypt.hash(this.password, 10);
-    }
-  }
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  updatedAt: Date;
 }
