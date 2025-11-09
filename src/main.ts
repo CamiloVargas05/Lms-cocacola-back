@@ -7,7 +7,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'https://lms-cocacola-front-production.up.railway.app',
-      'https://lms-cocacola-back-tester.up.railway.app',
+      'https://lms-cocacola-front-tester.up.railway.app',
       'http://localhost:3000',
       'http://localhost:3001',
     ],
