@@ -25,6 +25,12 @@ export class UsersService {
     @InjectRepository(Role)
     private readonly rolesRepository: Repository<Role>,
   ) {
+
+    // 🔥 LOGS PARA VER SI RAILWAY ESTÁ LEYENDO VARIABLES
+    console.log("===== VARIABLES DE CORREO DESDE RAILWAY =====");
+    console.log("EMAIL_USER:", process.env.EMAIL_USER);
+    console.log("EMAIL_PASSWORD:", process.env.EMAIL_PASSWORD);
+
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
