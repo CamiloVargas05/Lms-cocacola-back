@@ -39,6 +39,18 @@ export class User {
   @Column({ type: 'int', default: 0 })
   points: number;
 
+  // ============================
+  //   CAMPOS PARA RECUPERACIÓN DE PASSWORD
+  // ============================
+
+  @Column({ type: 'text', nullable: true })
+  resetPasswordCode: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date | null;
+
+  // ============================
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 

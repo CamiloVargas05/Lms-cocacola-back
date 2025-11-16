@@ -5,14 +5,18 @@ import { Modulo } from './entities/modulo.entity';
 import { CreateModuloDto } from './dto/create-modulo.dto';
 import { UpdateModuloDto } from './dto/update-modulo.dto';
 import { Curso } from 'src/cursos/entities/curso.entity';
+import { LeccionService } from 'src/leccion/leccion.service';
 
 @Injectable()
 export class ModulosService {
   constructor(
     @InjectRepository(Modulo)
     private readonly modulosRepository: Repository<Modulo>,
+
     @InjectRepository(Curso)
     private readonly cursosRepository: Repository<Curso>,
+
+    private readonly leccionService: LeccionService,
   ) {}
 
   async create(createModuloDto: CreateModuloDto): Promise<Modulo> {
@@ -52,6 +56,13 @@ export class ModulosService {
 
   async remove(id: number): Promise<void> {
     const modulo = await this.findOne(id);
+    if (!modulo) throw new NotFoundException('Modulo not found');
+
+    const lecciones = modulo.lecciones || [];
+    for (const leccion of lecciones) {
+      await this.leccionService.remove(leccion.id);
+    }
+
     await this.modulosRepository.remove(modulo);
   }
 }

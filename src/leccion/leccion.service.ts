@@ -28,16 +28,22 @@ export class LeccionService {
     const archivosUrls: string[] = []
 
     for (const file of archivos) {
-      const ext = file.originalname.split('.').pop()
-      const name = `${uuid()}.${ext}`
+      const carpeta = `modulos/${modulo.id}`
+
+      const filename = file.originalname
+
+      const filepath = `${carpeta}/${filename}`
 
       await supabase.storage
         .from(process.env.SUPABASE_BUCKET as string)
-        .upload(name, file.buffer, { contentType: file.mimetype })
+        .upload(filepath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true,
+        })
 
       const url = supabase.storage
         .from(process.env.SUPABASE_BUCKET as string)
-        .getPublicUrl(name).data.publicUrl
+        .getPublicUrl(filepath).data.publicUrl
 
       archivosUrls.push(url)
     }
@@ -82,8 +88,13 @@ export class LeccionService {
       const bucket = process.env.SUPABASE_BUCKET as string
 
       const filesToDelete = leccion.archivos
-        .map((url) => url.split('/').pop())
-        .filter((name): name is string => typeof name === 'string')
+        .map((url) => {
+          const start = url.indexOf(`/${bucket}/`)
+          if (start === -1) return null
+
+          return url.substring(start + bucket.length + 2)
+        })
+        .filter(Boolean) as string[]
 
       if (filesToDelete.length > 0) {
         await supabase.storage
