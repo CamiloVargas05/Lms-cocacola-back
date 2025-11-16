@@ -25,6 +25,7 @@ export class UsersService {
     @InjectRepository(Role)
     private readonly rolesRepository: Repository<Role>,
   ) {
+   
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -97,7 +98,7 @@ export class UsersService {
   }
 
   // ========================
-  //   FORGOT PASSWORD
+  //   FORGOT PASSWORD 
   // ========================
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     const user = await this.findByEmail(forgotPasswordDto.email);
@@ -116,6 +117,7 @@ export class UsersService {
       resetPasswordExpires: new Date(Date.now() + 15 * 60000),
     });
 
+    
     try {
       await this.transporter.sendMail({
         from: process.env.EMAIL_USER,
@@ -125,18 +127,22 @@ export class UsersService {
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #333;">Recuperación de Contraseña</h2>
             <p>Hola ${user.name},</p>
-            <p>Tu código de recuperación es:</p>
-            <div style="background:#f3f3f3;padding:20px;text-align:center;font-size:30px;font-weight:bold;letter-spacing:5px;">
+            <p>Has solicitado recuperar tu contraseña. Tu código de verificación es:</p>
+            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
               ${code}
             </div>
             <p>Este código expirará en 15 minutos.</p>
+            <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+            <p style="color: #888; font-size: 12px;">Este es un correo automático, por favor no responder.</p>
           </div>
         `,
       });
 
-      return { message: 'Código enviado a tu correo' };
+      return { message: 'Código de verificación enviado a tu correo' };
     } catch (error) {
-      throw new BadRequestException('Error al enviar el correo');
+      console.error('Error al enviar email:', error);
+      throw new BadRequestException('Error al enviar el correo de recuperación');
     }
   }
 
@@ -161,7 +167,7 @@ export class UsersService {
       throw new BadRequestException('Código incorrecto');
     }
 
-    return { message: 'Código correcto', valid: true };
+    return { message: 'Código verificado correctamente', valid: true };
   }
 
   // ========================
@@ -198,7 +204,7 @@ export class UsersService {
       resetPasswordExpires: null,
     });
 
-    return { message: 'Contraseña actualizada correctamente' };
+    return { message: 'Contraseña restablecida exitosamente' };
   }
 
   // ========================
