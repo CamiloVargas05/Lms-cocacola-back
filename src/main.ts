@@ -15,18 +15,20 @@ async function bootstrap() {
     }),
   );
 
-  // 🔥 CORS completamente abierto
   app.enableCors({
-    origin: '*',
+    origin: [
+      'https://lms-cocacola-front-production.up.railway.app',
+      'https://lms-cocacola-front-tester.up.railway.app',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: false,
+    credentials: true,
   });
 
   const PORT = process.env.PORT || 3000;
-  await app.listen(PORT, '0.0.0.0');
-
-  console.log(`🚀 Server running on port ${PORT}`);
+  await app.listen(PORT);
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
 }
-
 bootstrap();

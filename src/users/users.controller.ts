@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  BadRequestException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -17,6 +16,10 @@ import { VerifyCodeDto, ResetPasswordDto } from './dto/reset-password.dto';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  // ================================
+  //       RECUPERAR CONTRASEÑA
+  // ================================
 
   @Post('forgot-password')
   forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
@@ -33,6 +36,10 @@ export class UsersController {
     return this.usersService.resetPassword(resetPasswordDto);
   }
 
+  // ================================
+  //            CRUD
+  // ================================
+
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
@@ -45,25 +52,16 @@ export class UsersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    if (!id || isNaN(Number(id))) {
-      throw new BadRequestException('Invalid user id');
-    }
-    return this.usersService.findOne(Number(id));
+    return this.usersService.findOne(+id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    if (!id || isNaN(Number(id))) {
-      throw new BadRequestException('Invalid user id');
-    }
-    return this.usersService.update(Number(id), updateUserDto);
+    return this.usersService.update(+id, updateUserDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    if (!id || isNaN(Number(id))) {
-      throw new BadRequestException('Invalid user id');
-    }
-    return this.usersService.remove(Number(id));
+    return this.usersService.remove(+id);
   }
 }
