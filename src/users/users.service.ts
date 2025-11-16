@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -16,7 +16,7 @@ import { VerifyCodeDto, ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class UsersService {
-  private transporter;
+  private resend: Resend;
 
   constructor(
     @InjectRepository(User)
@@ -25,14 +25,7 @@ export class UsersService {
     @InjectRepository(Role)
     private readonly rolesRepository: Repository<Role>,
   ) {
-   
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
+    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
   // ========================
@@ -98,16 +91,14 @@ export class UsersService {
   }
 
   // ========================
-  //   FORGOT PASSWORD 
+  //   FORGOT PASSWORD
   // ========================
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     const user = await this.findByEmail(forgotPasswordDto.email);
 
-    if (!user) {
-      throw new NotFoundException('Este email no está registrado');
-    }
+    if (!user) throw new NotFoundException('Este email no está registrado');
 
-    // Generar código de 6 dígitos
+    // Código de 6 dígitos
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Guardar hash y expiración
@@ -117,32 +108,56 @@ export class UsersService {
       resetPasswordExpires: new Date(Date.now() + 15 * 60000),
     });
 
-    
+    // HTML bonito
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff; border-radius: 8px; border: 1px solid #e5e5e5;">
+        <h2 style="color: #cc0000; text-align: center;">Recuperación de Contraseña</h2>
+        <p style="font-size: 16px;">Hola <b>${user.name}</b>,</p>
+        <p style="font-size: 15px;">
+          Has solicitado recuperar tu contraseña. Por favor usa el siguiente código:
+        </p>
+        
+        <div style="
+          background: #f7f7f7;
+          padding: 18px;
+          text-align: center;
+          font-size: 36px;
+          font-weight: bold;
+          letter-spacing: 6px;
+          border-radius: 10px;
+          margin: 25px 0;
+        ">
+          ${code}
+        </div>
+
+        <p style="font-size: 14px; color: #666;">
+          Este código expirará en <b>15 minutos</b>.
+        </p>
+
+        <p style="font-size: 14px; color: #666;">
+          Si no realizaste esta solicitud, puedes ignorar este mensaje.
+        </p>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+        <p style="font-size: 12px; text-align: center; color: #999;">
+          Este es un mensaje automático, por favor no responder.
+        </p>
+      </div>
+    `;
+
     try {
-      await this.transporter.sendMail({
-        from: process.env.EMAIL_USER,
+      await this.resend.emails.send({
+        from: process.env.EMAIL_FROM!,
         to: user.email,
         subject: 'Código de recuperación de contraseña',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Recuperación de Contraseña</h2>
-            <p>Hola ${user.name},</p>
-            <p>Has solicitado recuperar tu contraseña. Tu código de verificación es:</p>
-            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-              ${code}
-            </div>
-            <p>Este código expirará en 15 minutos.</p>
-            <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
-            <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
-            <p style="color: #888; font-size: 12px;">Este es un correo automático, por favor no responder.</p>
-          </div>
-        `,
+        html,
       });
 
       return { message: 'Código de verificación enviado a tu correo' };
     } catch (error) {
       console.error('Error al enviar email:', error);
-      throw new BadRequestException('Error al enviar el correo de recuperación');
+      throw new BadRequestException('No se pudo enviar el correo de recuperación');
     }
   }
 
